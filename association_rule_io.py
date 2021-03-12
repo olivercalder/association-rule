@@ -90,8 +90,12 @@ def parse_args(args):
         print(err)
         usage()
         sys.exit(2)
-    transactions = sample_transactions
-    min_support = 3
+    arg_dict = {
+            'transactions' : sample_transactions,
+            'min_support'  : 3,
+            'outfile'      : sys.stdout,
+            'out_json'     : False
+            }
     min_percent = 0.0
     out_filename = ''
     out_json = False
@@ -100,12 +104,12 @@ def parse_args(args):
             usage()
             sys.exit()
         elif o in ('-e', '--example'):
-            transactions = sample_transactions
+            arg_dict['transactions'] = sample_transactions
         elif o in ('-p', '--parallel'):
-            # Use threading to do parallelization, maybe
-            pass
+            # Use threading to do parallelization, if algorithm supports it
+            arg_dict['parallel'] = True
         elif o in ('-c', '--csv'):
-            transactions = parse_transactions_from_csv(a)
+            arg_dict['transactions'] = parse_transactions_from_csv(a)
         elif o in ('-C', '--csv-out'):
             out_filename = a
             out_json = False
@@ -115,7 +119,7 @@ def parse_args(args):
             out_filename = a
             out_json = True
         elif o in ('-m', '--min-sup'):
-            min_support = int(a)
+            arg_dict['min_support'] = int(a)
         elif o in ('-M', '--min-perc'):
             min_percent = float(a)
         elif o in ('-s', '--stdin'):
@@ -123,10 +127,9 @@ def parse_args(args):
         else:
             assert False, f'Unknown option: {o}'
     if min_percent:
-        min_support = int(min_percent * len(transactions))
-    outfile = sys.stdout
+        arg_dict['min_support'] = int(min_percent * 0.01 * len(transactions))
     if out_filename:
-        outfile = open(out_filename, 'w')
+        arg_dict['outfile'] = open(out_filename, 'w')
     else:
-        out_json = False
-    return (transactions, min_support, outfile, out_json)
+        arg_dict['out_json'] = False
+    return arg_dict

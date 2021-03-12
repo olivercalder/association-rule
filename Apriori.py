@@ -78,6 +78,8 @@ def subset(candidateSet, transaction):
     return outputList
 
 if __name__ == '__main__':
-    transactionSet, minsup = ar_io.parse_args(sys.argv)
+    arg_dict = ar_io.parse_args(sys.argv)
+    transactionSet = arg_dict['transactions']
+    minsup = arg_dict['min_support']
     itemset = ar_io.get_items(transactionSet)
     print(apriori(itemset, transactionSet, minsup))
