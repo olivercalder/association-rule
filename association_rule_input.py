@@ -39,6 +39,19 @@ sample_transactions = [
         ('C', 'D', 'T')]
 
 
+def get_items(transactions):
+    complete_item_list = []
+    for transaction in transactions:
+        complete_item_list += transaction[0]
+    complete_item_list.sort()
+    unique_items = []
+    curr_item = ''
+    for item in complete_item_list:
+        if item != curr_item:
+            unique_items.append(item)
+            curr_item = item
+    return unique_items
+
 
 def parse_transactions_from_csv(filename):
     transactions = []
