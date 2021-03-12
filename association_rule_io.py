@@ -15,7 +15,11 @@ OPTIONS:
 
     -c  --csv CSVFILE: read transactions from the given CSV file
 
+    -C  --out-csv CSVFILE: write output in CSV format to the given file
+
     -j  --json JSONFILE: read transactions from the given JSON file
+
+    -J  --out-json JSONFILE: write output in JSON format to the given file
 
     -m  --min-support INT: set the minimum support value to INT
 
@@ -81,7 +85,7 @@ def parse_transactions_from_stdin():
 
 def parse_args(args):
     try:
-        optlist, args = getopt.gnu_getopt(args, 'hepc:j:m:M:s:', ['help', 'example', 'parallel', 'csv=', 'json=', 'min-sup=', 'min-perc=', 'stdin'])
+        optlist, args = getopt.gnu_getopt(args, 'hepc:C:j:J:m:M:s:', ['help', 'example', 'parallel', 'csv=', 'csv-out=', 'json=', 'json-out=', 'min-sup=', 'min-perc=', 'stdin'])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -89,6 +93,8 @@ def parse_args(args):
     transactions = sample_transactions
     min_support = 3
     min_percent = 0.0
+    out_filename = ''
+    out_json = False
     for o, a in optlist:
         if o in ('-h', '--help'):
             usage()
@@ -100,8 +106,14 @@ def parse_args(args):
             pass
         elif o in ('-c', '--csv'):
             transactions = parse_transactions_from_csv(a)
+        elif o in ('-C', '--csv-out'):
+            out_filename = a
+            out_json = False
         elif o in ('-j', '--json'):
             transactions = parse_transactions_from_json(a)
+        elif o in ('-J', '--json-out'):
+            out_filename = a
+            out_json = True
         elif o in ('-m', '--min-sup'):
             min_support = int(a)
         elif o in ('-M', '--min-perc'):
@@ -112,4 +124,9 @@ def parse_args(args):
             assert False, f'Unknown option: {o}'
     if min_percent:
         min_support = int(min_percent * len(transactions))
-    return (transactions, min_support)
+    outfile = sys.stdout
+    if out_filename:
+        outfile = open(out_filename, 'w')
+    else:
+        out_json = False
+    return (transactions, min_support, outfile, out_json)
