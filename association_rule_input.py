@@ -42,7 +42,7 @@ sample_transactions = [
 def get_items(transactions):
     complete_item_list = []
     for transaction in transactions:
-        complete_item_list += transaction[0]
+        complete_item_list += transaction
     complete_item_list.sort()
     unique_items = []
     curr_item = ''
@@ -113,5 +113,3 @@ def parse_args(args):
     if min_percent:
         min_support = int(min_percent * len(transactions))
     return (transactions, min_support)
-
-
