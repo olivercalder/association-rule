@@ -61,10 +61,13 @@ def apriori_gen(largeItemSet, setLength):
     #conversion of tuples to set of singular items
     singleSet = set()
     for smallTuple in largeItemSet:
-        for x in smallTuple:
-            singleSet.add(x)
+        if(setLength != 2):
+            for x in smallTuple:
+                singleSet.add(x)
+        else:
+            singleSet.add(smallTuple)
     #generating all possible combinations of itemset
-    return iTools.combinations(singleSet, setLength)
+    return iTools.combinations(list(singleSet), setLength)
 
 #subset function that returns all itemsets that appear in both candidateSet and transaction
 #input: candidateSet should be a dictionary of candidates and associated support
@@ -80,4 +83,4 @@ def subset(candidateSet, transaction):
 if __name__ == '__main__':
     transactionSet, minsup = ar_input.parse_args(sys.argv)
     itemset = ar_input.get_items(transactionSet)
-    print(apriori(itemset, transactionSet, minsup))
+    apriori(itemset, transactionSet, minsup)
