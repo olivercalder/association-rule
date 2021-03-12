@@ -15,7 +15,11 @@ OPTIONS:
 
     -c  --csv CSVFILE: read transactions from the given CSV file
 
+    -C  --out-csv CSVFILE: write output in CSV format to the given file
+
     -j  --json JSONFILE: read transactions from the given JSON file
+
+    -J  --out-json JSONFILE: write output in JSON format to the given file
 
     -m  --min-support INT: set the minimum support value to INT
 
@@ -81,29 +85,41 @@ def parse_transactions_from_stdin():
 
 def parse_args(args):
     try:
-        optlist, args = getopt.gnu_getopt(args, 'hepc:j:m:M:s:', ['help', 'example', 'parallel', 'csv=', 'json=', 'min-sup=', 'min-perc=', 'stdin'])
+        optlist, args = getopt.gnu_getopt(args, 'hepc:C:j:J:m:M:s:', ['help', 'example', 'parallel', 'csv=', 'csv-out=', 'json=', 'json-out=', 'min-sup=', 'min-perc=', 'stdin'])
     except getopt.GetoptError as err:
         print(err)
         usage()
         sys.exit(2)
-    transactions = sample_transactions
-    min_support = 3
+    arg_dict = {
+            'transactions' : sample_transactions,
+            'min_support'  : 3,
+            'outfile'      : sys.stdout,
+            'out_json'     : False
+            }
     min_percent = 0.0
+    out_filename = ''
+    out_json = False
     for o, a in optlist:
         if o in ('-h', '--help'):
             usage()
             sys.exit()
         elif o in ('-e', '--example'):
-            transactions = sample_transactions
+            arg_dict['transactions'] = sample_transactions
         elif o in ('-p', '--parallel'):
-            # Use threading to do parallelization, maybe
-            pass
+            # Use threading to do parallelization, if algorithm supports it
+            arg_dict['parallel'] = True
         elif o in ('-c', '--csv'):
-            transactions = parse_transactions_from_csv(a)
+            arg_dict['transactions'] = parse_transactions_from_csv(a)
+        elif o in ('-C', '--csv-out'):
+            out_filename = a
+            out_json = False
         elif o in ('-j', '--json'):
             transactions = parse_transactions_from_json(a)
+        elif o in ('-J', '--json-out'):
+            out_filename = a
+            out_json = True
         elif o in ('-m', '--min-sup'):
-            min_support = int(a)
+            arg_dict['min_support'] = int(a)
         elif o in ('-M', '--min-perc'):
             min_percent = float(a)
         elif o in ('-s', '--stdin'):
@@ -111,5 +127,9 @@ def parse_args(args):
         else:
             assert False, f'Unknown option: {o}'
     if min_percent:
-        min_support = int(min_percent * len(transactions))
-    return (transactions, min_support)
+        arg_dict['min_support'] = int(min_percent * 0.01 * len(transactions))
+    if out_filename:
+        arg_dict['outfile'] = open(out_filename, 'w')
+    else:
+        arg_dict['out_json'] = False
+    return arg_dict

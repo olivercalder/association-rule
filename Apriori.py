@@ -1,6 +1,6 @@
 import itertools as iTools
 import sys
-import association_rule_input as ar_input
+import association_rule_io as ar_io
 
 #input: itemset should be a list of items (each item is a tuple)
 #input: transactionset is a list of tuples (tuples represent itemsets)
@@ -81,6 +81,8 @@ def subset(candidateSet, transaction):
     return outputList
 
 if __name__ == '__main__':
-    transactionSet, minsup = ar_input.parse_args(sys.argv)
-    itemset = ar_input.get_items(transactionSet)
-    apriori(itemset, transactionSet, minsup)
+    arg_dict = ar_io.parse_args(sys.argv)
+    transactionSet = arg_dict['transactions']
+    minsup = arg_dict['min_support']
+    itemset = ar_io.get_items(transactionSet)
+    print(apriori(itemset, transactionSet, minsup))
