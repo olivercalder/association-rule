@@ -134,7 +134,8 @@ def main(transactions, min_support):
     valid_itemset_vectors.sort(key=lambda entry: entry[2], reverse=True)
     end_time = time.time()
     print(end_time - start_time, 'seconds', file=sys.stderr)
-    print(f'Itemset with greatest support has support of {valid_itemset_vectors[0][2]}.')
+    if len(valid_itemset_vectors) > 0:
+        print(f'Itemset with greatest support has support of {valid_itemset_vectors[0][2]}.')
 
     print('\nBuilding itemset names for valid itemsets... ', end='', file=sys.stderr)
     start_time = time.time()
