@@ -1,6 +1,7 @@
 import sys
-import association_rule_input as ar_input
+import association_rule_io as ar_io
 import time
+import csv
 
 
 def get_bit_vectors_and_items(transaction_list):
@@ -95,7 +96,7 @@ def get_itemsets(bit_vectors, items):
     return itemsets
 
 
-def main(transactions, min_support):
+def main(transactions, min_support, outfile=sys.stdout):
     print(f'Creating bit vectors from list of {len(transactions)} transactions... ', end='', file=sys.stderr)
     start_time = time.time()
     initial_bit_vectors, items = get_bit_vectors_and_items(transactions)
@@ -144,10 +145,12 @@ def main(transactions, min_support):
     end_time = time.time()
     print(end_time - start_time, 'seconds', file=sys.stderr)
 
+    writer = csv.writer(outfile)
     for i in range(len(valid_itemset_vectors)):
-        print(f'Itemset: {itemset_names[i]}\nSupport: {valid_itemset_vectors[i][2]}\n')
+        writer.writerow([valid_itemset_vectors[i][2]] + itemset_names[i])
+        #print(f'Itemset: {itemset_names[i]}\nSupport: {valid_itemset_vectors[i][2]}\n')
 
 
 if __name__ == '__main__':
-    transactions, min_support = ar_input.parse_args(sys.argv)
+    transactions, min_support = ar_io.parse_args(sys.argv)
     main(transactions, min_support)
