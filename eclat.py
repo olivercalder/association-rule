@@ -132,6 +132,8 @@ def eclat_parallel(bit_vectors, min_support):
     while not valid_queue.empty():
         valid_itemset_vectors.append(valid_queue.get())
 
+    work_queue.close()
+
     for p in processes:
         p.terminate()
         while True:
@@ -230,7 +232,7 @@ def main(transactions=ar_io.sample_transactions, min_support=3, outfile=sys.stdo
             writer.writerow([valid_itemset_vectors[i][2]] + itemset_names[i])
     if outfile != sys.stdout:
         outfile.close()
-    sys.exit(0) # terminate primary process
+    #sys.exit(0) # terminate primary process
 
 
 if __name__ == '__main__':
