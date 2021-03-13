@@ -3,7 +3,8 @@ import association_rule_io as ar_io
 import time
 import csv
 import json
-from multiprocessing import Process, Queue, JoinableQueue, cpu_count
+from multiprocessing import Process, JoinableQueue, Manager, Value, cpu_count
+from queue import Empty as QueueEmptyError
 
 
 def get_bit_vectors_and_items(transaction_list):
@@ -84,7 +85,7 @@ def eclat(bit_vectors, min_support):
     return valid_itemset_vectors
 
 
-def eclat_parallel_helper(index, bit_vectors, min_support, work_queue, valid_queue):
+def eclat_parallel_helper(index, bit_vectors, min_support, work_queue, valid_list):
     next_vectors = []
     for j in range(index + 1, len(bit_vectors)):
         item_vector = bit_vectors[index][0] | bit_vectors[j][0]
@@ -93,20 +94,21 @@ def eclat_parallel_helper(index, bit_vectors, min_support, work_queue, valid_que
         if support >= min_support:
             next_vectors.append((item_vector, transaction_vector, support))
     if len(next_vectors) > 0:
+        valid_list.extend(next_vectors)
         for i in range(len(next_vectors)):
-            valid_queue.put(next_vectors[i])
             work_queue.put((eclat_parallel_helper, (i, next_vectors, min_support)))
 
 
-def do_work(work_queue, valid_queue, not_done):
+def do_work(work_queue, valid_list, not_done):
     # work queue entries have the form (function, args)
-    while not_done:
+    while not_done.value:
         try:
             function, args = work_queue.get_nowait()
-        except queue.Empty:
+        except QueueEmptyError:
             continue
-        function(*args, work_queue, valid_queue)
+        function(*args, work_queue, valid_list)
         work_queue.task_done()
+    work_queue.close()
 
 
 def eclat_parallel(bit_vectors, min_support):
@@ -118,25 +120,27 @@ def eclat_parallel(bit_vectors, min_support):
     # Assumes all items in bit_vectors meet min_support.
 
     not_done = Value('i', 1)
-    valid_queue = Queue()
+    manager = Manager()
+    valid_list = manager.list()
     work_queue = JoinableQueue()
     for i in range(len(bit_vectors)):
-        valid_queue.put(bit_vectors[i])
         work_queue.put((eclat_parallel_helper, (i, bit_vectors, min_support)))
 
     processes = []
     for i in range(cpu_count()):
-        p = Process(target=do_work, args=(work_queue, valid_queue, not_done), daemon=True)
-        processes.append(p)
+        p = Process(target=do_work, args=(work_queue, valid_list, not_done), daemon=True)
         p.start()
+        processes.append(p)
 
     work_queue.join()
 
-    not_done = 0
+    not_done.value = 0
 
-    valid_itemset_vectors = []
-    while not valid_queue.empty():
-        valid_itemset_vectors.append(valid_queue.get())
+    work_queue.close()
+
+    valid_itemset_vectors = bit_vectors
+    for element in valid_list:
+        valid_itemset_vectors.append(element)
 
     for p in processes:
         p.join()
