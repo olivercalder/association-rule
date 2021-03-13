@@ -139,6 +139,7 @@ def get_itemsets(bit_vectors, items):
 
 
 def main(transactions=ar_io.sample_transactions, min_support=3, outfile=sys.stdout, out_json=False, parallel=False):
+    assert(min_support > 0)
     print(f'Creating bit vectors from list of {len(transactions)} transactions... ', end='', file=sys.stderr)
     start_time = time.time()
     initial_bit_vectors, items = get_bit_vectors_and_items(transactions)
