@@ -98,10 +98,13 @@ def eclat_parallel_helper(index, bit_vectors, min_support, work_queue, valid_que
             work_queue.put((eclat_parallel_helper, (i, next_vectors, min_support)))
 
 
-def do_work(work_queue, valid_queue):
+def do_work(work_queue, valid_queue, not_done):
     # work queue entries have the form (function, args)
-    while True:
-        function, args = work_queue.get_nowait()
+    while not_done:
+        try:
+            function, args = work_queue.get_nowait()
+        except queue.Empty:
+            continue
         function(*args, work_queue, valid_queue)
         work_queue.task_done()
 
@@ -114,6 +117,7 @@ def eclat_parallel(bit_vectors, min_support):
     # transactions in which the itemset occurs.
     # Assumes all items in bit_vectors meet min_support.
 
+    not_done = Value('i', 1)
     valid_queue = Queue()
     work_queue = JoinableQueue()
     for i in range(len(bit_vectors)):
@@ -122,27 +126,20 @@ def eclat_parallel(bit_vectors, min_support):
 
     processes = []
     for i in range(cpu_count()):
-        p = Process(target=do_work, args=(work_queue, valid_queue), daemon=True)
+        p = Process(target=do_work, args=(work_queue, valid_queue, not_done), daemon=True)
         processes.append(p)
         p.start()
 
     work_queue.join()
-    work_queue.close()
+
+    not_done = 0
 
     valid_itemset_vectors = []
     while not valid_queue.empty():
         valid_itemset_vectors.append(valid_queue.get())
 
-    valid_queue.close()
-
     for p in processes:
-        p.terminate()
-        while True:
-            try:
-                p.close()
-            except ValueError:
-                continue
-            break
+        p.join()
 
     return valid_itemset_vectors
 
