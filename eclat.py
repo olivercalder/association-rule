@@ -100,7 +100,7 @@ def eclat_parallel_helper(index, bit_vectors, min_support, work_queue, valid_que
 
 def do_work(work_queue, valid_queue):
     # work queue entries have the form (function, args)
-    while not queue.empty():
+    while not work_queue.empty():
         function, args = work_queue.get(True, 5)
         function(*args, work_queue, valid_queue)
         work_queue.task_done()
