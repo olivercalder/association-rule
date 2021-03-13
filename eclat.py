@@ -3,7 +3,7 @@ import association_rule_io as ar_io
 import time
 import csv
 import json
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, JoinableQueue, cpu_count
 
 
 def get_bit_vectors_and_items(transaction_list):
@@ -84,7 +84,7 @@ def eclat(bit_vectors, min_support):
     return valid_itemset_vectors
 
 
-def eclat_parallel_helper(index, queue, bit_vectors, min_support):
+def eclat_parallel_helper(index, bit_vectors, min_support, work_queue, valid_queue):
     next_vectors = []
     for j in range(index + 1, len(bit_vectors)):
         item_vector = bit_vectors[index][0] | bit_vectors[j][0]
@@ -93,11 +93,17 @@ def eclat_parallel_helper(index, queue, bit_vectors, min_support):
         if support >= min_support:
             next_vectors.append((item_vector, transaction_vector, support))
     if len(next_vectors) > 0:
-        valid_itemset_vectors = eclat_parallel(next_vectors, min_support)
-        for entry in next_vectors:
-            queue.put(entry)
-        for entry in valid_itemset_vectors:
-            queue.put(entry)
+        for i in range(len(next_vectors)):
+            valid_queue.put(next_vectors[i])
+            work_queue.put((eclat_parallel_helper, (i, next_vectors, min_support)))
+
+
+def do_work(work_queue, valid_queue):
+    # work queue entries have the form (function, args)
+    while True:
+        function, args = work_queue.get()
+        function(*args, work_queue, valid_queue)
+        work_queue.task_done()
 
 
 def eclat_parallel(bit_vectors, min_support):
@@ -107,20 +113,34 @@ def eclat_parallel(bit_vectors, min_support):
     # transactions the itemset appears in, and support is the number of
     # transactions in which the itemset occurs.
     # Assumes all items in bit_vectors meet min_support.
-    valid_itemset_vectors = []
-    processes = []
-    queues = []
+
+    valid_queue = Queue()
+    work_queue = JoinableQueue()
     for i in range(len(bit_vectors)):
-        q = Queue()
-        queues.append(q)
-        p = Process(target=eclat_parallel_helper, args=(i, q, bit_vectors, min_support))
+        valid_queue.put(bit_vectors[i])
+        work_queue.put((eclat_parallel_helper, (i, bit_vectors, min_support)))
+
+    processes = []
+    for i in range(cpu_count()):
+        p = Process(target=do_work, args=(work_queue, valid_queue), daemon=True)
         processes.append(p)
         p.start()
+
+    work_queue.join()
+
+    valid_itemset_vectors = []
+    while not valid_queue.empty():
+        valid_itemset_vectors.append(valid_queue.get())
+
     for p in processes:
-        p.join()
-    for q in queues:
-        while not q.empty():
-            valid_itemset_vectors.append(q.get())
+        p.terminate()
+        while True:
+            try:
+                p.close()
+            except ValueError:
+                continue
+            break
+
     return valid_itemset_vectors
 
 
@@ -165,20 +185,25 @@ def main(transactions=ar_io.sample_transactions, min_support=3, outfile=sys.stdo
     print(f'Pruned {len(initial_bit_vectors) - len(bit_vectors)} items; {len(bit_vectors)} remain.', file=sys.stderr)
 
     print(f'\nRunning the Eclat algorithm {"in parallel " if parallel else ""}on remaining bit vectors... ', end='', file=sys.stderr)
-    valid_itemset_vectors = bit_vectors
+    valid_itemset_vectors = []
     start_time = time.time()
     # Compute the itemset bit vectors which meet the minimum support
     if parallel:
-        valid_itemset_vectors += eclat_parallel(bit_vectors, min_support)
+        valid_itemset_vectors = eclat_parallel(bit_vectors, min_support)
     else:
-        valid_itemset_vectors += eclat(bit_vectors, min_support)
+        valid_itemset_vectors = bit_vectors + eclat(bit_vectors, min_support)
     end_time = time.time()
     print(end_time - start_time, 'seconds', file=sys.stderr)
     print(f'Found {len(valid_itemset_vectors)} itemsets which meet minimum support.', file=sys.stderr)
 
-    print('\nSorting itemsets according to support, with greatest support first... ', end='', file=sys.stderr)
+    print('\nNow sort itemsets according to the following parameters:', file=sys.stderr)
+    print('    1. Size of support', file=sys.stderr)
+    print('    2. Size of itemset', file=sys.stderr)
+    print('    3. Lexicographically by items', file=sys.stderr)
+    print('Sorting... ', end='', file=sys.stderr)
     start_time = time.time()
-    # OPTIONAL: Sort itemsets so that those with the greatest support appear first
+    #valid_itemset_vectors.sort(key=lambda entry: entry[0])      # already sorted this way
+    valid_itemset_vectors.sort(key=lambda entry: get_vector_support(entry[0]), reverse=True)
     valid_itemset_vectors.sort(key=lambda entry: entry[2], reverse=True)
     end_time = time.time()
     print(end_time - start_time, 'seconds', file=sys.stderr)
@@ -205,6 +230,7 @@ def main(transactions=ar_io.sample_transactions, min_support=3, outfile=sys.stdo
             writer.writerow([valid_itemset_vectors[i][2]] + itemset_names[i])
     if outfile != sys.stdout:
         outfile.close()
+    sys.exit(0) # terminate primary process
 
 
 if __name__ == '__main__':
