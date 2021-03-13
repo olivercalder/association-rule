@@ -1,6 +1,8 @@
 import itertools as iTools
-import sys
 import association_rule_io as ar_io
+import sys
+import csv
+import json
 
 #input: itemset should be a list of items (each item is a tuple)
 #input: transactionset is a list of tuples (tuples represent itemsets)
@@ -49,9 +51,11 @@ def apriori(itemset, transactionSet, minsup):
         k +=1
 
     #Returning the last non-empty large itemset (with the highest k value)
-    for smallDict in allLarge:
-        for item in smallDict:
-            print("Set: " + str(item) + "; Support: " + str(smallDict[item]))
+    # for smallDict in allLarge:
+    #     for item in smallDict:
+    #         print("Set: " + str(item) + "; Support: " + str(smallDict[item]))
+
+    return allLarge
 
 #function to generate possible candidate sets based on the Lk-1 itemset
 #input: largeItemSet should be dict
@@ -80,9 +84,35 @@ def subset(candidateSet, transaction):
             outputList.append(cand)
     return outputList
 
-if __name__ == '__main__':
+#Pre and post processing
+def main():
+    #Pre-processing
     arg_dict = ar_io.parse_args(sys.argv)
     transactionSet = arg_dict['transactions']
     minsup = arg_dict['min_support']
     itemset = ar_io.get_items(transactionSet)
-    print(apriori(itemset, transactionSet, minsup))
+    sigItemset = apriori(itemset, transactionSet, minsup)
+
+    #Post-processing/formatting outputList
+    out_json = arg_dict['out_json']
+    outfile = arg_dict['outfile']
+    if out_json:
+        out_list = []
+        for i in range(len(sigItemset)):
+            kset = sigItemset[i]
+            for singleSet in kset:
+                support = kset[singleSet]
+                out_list.append([support, singleSet])
+        json.dump(out_list, outfile)
+    else:
+        writer = csv.writer(outfile)
+        for i in range(len(sigItemset)):
+            kset = sigItemset[i]
+            for singleSet in kset:
+                support = kset[singleSet]
+                writer.writerow([str(support), str(singleSet)])
+    if outfile != sys.stdout:
+        outfile.close()
+
+if __name__ == '__main__':
+    main()
