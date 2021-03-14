@@ -21,10 +21,10 @@ OPTIONS:
 
     -J  --out-json JSONFILE: write output in JSON format to the given file
 
-    -m  --min-support INT: set the minimum support value to INT
+    -m  --min-support MIN_SUP: set the minimum support value to MIN_SUP
 
-    -M  --min-perc FLOAT: set the minimum support percentage to FLOAT, where
-                FLOAT is a value between 0.0 and 100.0
+    -M  --min-perc MIN_PERC: set the minimum support percentage to MIN_PERC,
+                where MIN_PERC is a value between 0.0 and 100.0
 
     -s  --stdin: read transactions from stdin, assuming one transaction per
                 row in CSV format
