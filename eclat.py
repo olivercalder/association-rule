@@ -5,6 +5,7 @@ import csv
 import json
 from multiprocessing import Process, JoinableQueue, Manager, Value, cpu_count
 from queue import Empty as QueueEmptyError
+import math
 
 
 def get_bit_vectors_and_items(transaction_list):
@@ -155,9 +156,12 @@ def get_itemsets(bit_vectors, items):
     for entry in bit_vectors:
         item_vector = entry[0]
         itemset = []
-        for i in range(len(items)):
-            if item_vector & (1 << i):
-                itemset.append(items[i])
+        while item_vector:
+            next_vector = item_vector & (item_vector - 1)
+            rightmost_bit = item_vector ^ next_vector
+            item_index = int(math.log2(rightmost_bit))
+            itemset.append(items[item_index])
+            item_vector = next_vector
         itemsets.append(itemset)
     return itemsets
 
