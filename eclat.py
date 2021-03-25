@@ -54,8 +54,8 @@ def get_bit_vectors_and_items(transaction_list):
 def get_vector_support(vector):
     support = 0
     while vector:
-        support += vector & 1
-        vector >>= 1
+        vector &= (vector - 1)
+        support += 1
     return support
 
 
